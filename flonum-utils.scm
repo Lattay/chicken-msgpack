@@ -25,7 +25,8 @@
 ;;  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 ;;  THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-(import chicken.foreign)
+(import srfi-4
+        chicken.foreign)
 (import byte-blob blob-set-int)
 
 (define (byte-blob->float bblob)

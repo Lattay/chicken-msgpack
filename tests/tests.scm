@@ -24,9 +24,12 @@
 ;;  THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 (declare (not standard-bindings vector-length))
-(include "utils.scm")
-(include "msgpack-imple.scm")
-(use test byte-blob numbers)
+(load "msgpack-imple")
+(import test
+        srfi-69
+        byte-blob
+        chicken.port)
+(include "tests/utils.scm")
 
 (define fast/full 'fast) ; some tests are slow
 
@@ -36,8 +39,8 @@
      (let ((original name))
        (set! name value)
        (let ((r (with-mocks rest body ...)))
-	 (set! name original)
-	 r)))
+         (set! name original)
+         r)))
     ((with-mocks () body ...)
      (let ()
        body ...))))
@@ -181,16 +184,16 @@
     (syntax-rules ()
       ((test-container-limit size_proc_name type value min max)
        (let ()
-	 (with-mocks ((size_proc_name (lambda (e) min)))
-		     (test-header (string-append (symbol->string type) " min") value type))
-	 (with-mocks ((size_proc_name (lambda (e) max)))
-		     (test-header (string-append (symbol->string type) " max") value type))))))
+         (with-mocks ((size_proc_name (lambda (e) min)))
+                     (test-header (string-append (symbol->string type) " min") value type))
+         (with-mocks ((size_proc_name (lambda (e) max)))
+                     (test-header (string-append (symbol->string type) " max") value type))))))
 
   (define-syntax test-container-out-of-limit
     (syntax-rules ()
       ((test-container-out-of-limit size_proc_name limit value)
        (with-mocks ((size_proc_name (lambda (x) (+ limit 1))))
-		   (test-error "out of limit" (pack/as-blob value))))))
+                   (test-error "out of limit" (pack/as-blob value))))))
 
   (test-group "uint"
     (test-assert "fixed uint min" (fixed-uint? (packed-header 0)))

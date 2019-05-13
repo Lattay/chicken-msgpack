@@ -23,7 +23,8 @@
 ;;  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 ;;  THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-(use test random-bsd byte-blob)
+(import chicken.random
+        srfi-1)
 
 (define (empty-string? s)
   (string=? s ""))
@@ -47,15 +48,15 @@
   test-equals?)
 
 (define (make-byte-blob size)
-  (byte-blob-replicate size (random-integer 256)))
+  (byte-blob-replicate size (pseudo-random-integer 256)))
 
 (define (random-generator #!key (size 1000))
-  (let ((rnd (random-integer size))
-        (rnd2 (random-integer 1)))
+  (let ((rnd (pseudo-random-integer size))
+        (rnd2 (pseudo-random-integer 1)))
     (cond ((< rnd (* size .01))
-           (vector-ref '#(#t #f ()) (random-integer 3)))
+           (vector-ref '#(#t #f ()) (pseudo-random-integer 3)))
           ((odd? rnd)
-           (make-byte-blob (+ (random-integer 12) 1)))
+           (make-byte-blob (+ (pseudo-random-integer 12) 1)))
           (#t
            (if (= 0 rnd2)
              rnd

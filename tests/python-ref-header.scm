@@ -1,4 +1,4 @@
-(use byte-blob test msgpack)
+(import test msgpack)
 
 (define (byte-blob . args)
   (byte-blob-reverse 
