@@ -25,8 +25,8 @@
 ;;  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 ;;  THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-(import foreign)
-(use srfi-4 byte-blob numbers blob-set-int)
+(import chicken.foreign)
+(import byte-blob blob-set-int)
 
 (define (byte-blob->float bblob)
   (let ((v (byte-blob->u8vector bblob)))

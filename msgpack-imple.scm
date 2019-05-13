@@ -25,8 +25,19 @@
 ;;  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 ;;  THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-(use srfi-69 byte-blob numbers srfi-1 matchable)
-(include "flonum-utils.scm")
+(import scheme
+        srfi-4
+        chicken.base
+        chicken.bitwise
+        chicken.blob
+        chicken.foreign
+        chicken.format
+        chicken.io)
+(import srfi-1
+        srfi-69
+        byte-blob
+        matchable)
+(include "flonum-utils")
 
 ;; limits
 (define fixed_uint_limit  127)
@@ -148,7 +159,7 @@
 (define (read-sint port size #!optional (mapper identity))
   (let ((bytes (read-bytes* port size)))
     (mapper
-      (if (bit-set? (car bytes) 7) ; its negative
+      (if (bit->boolean (car bytes) 7) ; its negative
         (- (add1 (bytes->number bytes (cut - 255 <>))))
         (bytes->number bytes identity)))))
 
@@ -516,7 +527,7 @@
                            'fixext8 'fixext16)             ((Ext    'unpack constant) port mapper))
                       ('float                              ((Float  'unpack)          port mapper))
                       ('double                             ((Double 'unpack)          port mapper))
-                      (else                                (mapper constant)))))
+                      (other                               (mapper other)))))
             ((fixed-uint? value)  ((Uint  'unpack 'fixed) port value mapper))
             ((fixed-sint? value)  ((Sint  'unpack 'fixed) port value mapper))
             ((fixed-str? value)   ((Str   'unpack 'fixed) port value mapper))

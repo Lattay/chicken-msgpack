@@ -35,7 +35,10 @@
          extension? make-extension
          extension-type extension-data
          extension-type-set! extension-data-set!)
-        (import scheme chicken data-structures extras foreign)
-        (require-library srfi-69 byte-blob numbers)
-        (include "msgpack-imple.scm")
+        (import scheme
+                chicken.base
+                chicken.foreign
+                chicken.blob)
+        (import srfi-69 byte-blob)
+        (include "msgpack-imple")
 ); end modulue
