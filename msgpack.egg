@@ -7,5 +7,6 @@
  (version "0.2.0")
  (synopsis "MessagePack implementation for CHICKEN")
  (components 
-    (extension msgpack.so (csc-options "-X bind -c++ -s -j msgpack"))
-    (extension msgpack.import.so)))
+    (extension msgpack
+      (csc-options "-c++")
+      (modules msgpack))))

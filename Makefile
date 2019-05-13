@@ -2,19 +2,24 @@ PREFIX=/usr/local
 
 .PHONY: all test test-python-ref clean
 
-all: test-python-ref test msgpack.so
+all: msgpack.so
 
+# Development tests
 test: msgpack-imple.so
 	$(PREFIX)/bin/csc -X bind -c++ -I tests/ tests/tests.scm -o run
 	./run
 
-test-python-ref: msgpack.so
+# Post install tests
+test-python-ref: clean
+	$(PREFIX)/bin/chicken-install -s
 	python tests/python-ref.py
 	$(PREFIX)/bin/csi -s tests/python-ref-tests.scm
 
+# Development interface
 msgpack-imple.so:
 	$(PREFIX)/bin/csc -X bind -c++ -s msgpack-imple.scm
 
+# Module interface
 msgpack.so:
 	$(PREFIX)/bin/csc -X bind -c++ -s -j msgpack -o msgpack.so msgpack.scm
 	$(PREFIX)/bin/csc msgpack.import.scm -dynamic

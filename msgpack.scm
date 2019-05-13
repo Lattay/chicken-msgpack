@@ -25,9 +25,8 @@
 ;;  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 ;;  THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-(module msgpack
-        (;export
-         pack
+(module msgpack 
+        (pack
          pack-uint pack-sint
          pack-float pack-double
          pack-str pack-bin pack-array pack-map pack-ext
@@ -35,10 +34,6 @@
          extension? make-extension
          extension-type extension-data
          extension-type-set! extension-data-set!)
-        (import scheme
-                chicken.base
-                chicken.foreign
-                chicken.blob)
-        (import srfi-69 byte-blob)
-        (include "msgpack-imple")
-); end modulue
+  (import chicken.base)
+  (include "msgpack-imple")
+)

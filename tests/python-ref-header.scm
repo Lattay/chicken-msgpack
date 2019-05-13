@@ -4,7 +4,6 @@
 (import test
         srfi-1
         byte-blob)
-(load "msgpack")
 (import msgpack)
 
 (define (byte-blob . args)
