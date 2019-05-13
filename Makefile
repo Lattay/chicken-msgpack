@@ -1,21 +1,22 @@
-module: clean
+PREFIX=/usr/local
 
-	csc -X bind -c++ -s flonum-utils.scm
-	csc -X bind -c++ -s msgpack-imple.scm
-	csc -X bind -c++ -s -j msgpack -o msgpack.so msgpack.scm
-	csc msgpack.import.scm -dynamic
+.PHONY: all test module test-python-ref clean
 
-test: clean
+all: module test-python-ref test
 
-	csc -X bind -c++ -I tests/ tests/tests.scm -o run
+test: module
+	$(PREFIX)/bin/csc -X bind -c++ -I tests/ tests/tests.scm -o run
 	./run
 
-test-python-ref: clean
+module: clean
+	$(PREFIX)/bin/csc -X bind -c++ -s flonum-utils.scm
+	$(PREFIX)/bin/csc -X bind -c++ -s msgpack-imple.scm
+	$(PREFIX)/bin/csc -X bind -c++ -s -j msgpack -o msgpack.so msgpack.scm
+	$(PREFIX)/bin/csc msgpack.import.scm -dynamic
 
-	chicken-install -s
+test-python-ref: module
 	python tests/python-ref.py
-	csi -s tests/python-ref-tests.scm
+	$(PREFIX)/bin/csi -s tests/python-ref-tests.scm
 
 clean:
-
 	rm -f tests/*.o *.o run *.c tests/*.c *.so msgpack.import.scm tests/python-ref-tests.scm tests/run

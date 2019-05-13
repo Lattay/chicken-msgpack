@@ -1,4 +1,11 @@
-(import test msgpack)
+(import scheme
+        chicken.blob
+        chicken.port)
+(import test
+        srfi-1
+        byte-blob)
+(load "msgpack")
+(import msgpack)
 
 (define (byte-blob . args)
   (byte-blob-reverse 
