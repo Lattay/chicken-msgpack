@@ -3,4 +3,5 @@
 *.so
 *.o
 tests/python-ref-tests.scm
+run
 msgpack.import.scm
