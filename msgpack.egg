@@ -1,0 +1,11 @@
+((license "BSD")
+ (category parsing)
+ (dependencies srfi-1 srfi-69 byte-blob blob-utils bind matchable)
+ (test-dependencies test byte-blob srfi-1)
+ (author "Hugo Arregui")
+ (maintainer "Théo Cavignac")
+ (version "0.2.0")
+ (synopsis "MessagePack implementation for CHICKEN")
+ (components 
+    (extension msgpack.so (csc-options "-X bind -c++ -s -j msgpack"))
+    (extension msgpack.import.so)))

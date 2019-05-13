@@ -1,9 +1,0 @@
-(compile -X bind -c++ -s -O2 -d1 flonum-utils.scm)
-(compile -X bind -c++ -s -O2 -d1 msgpack-imple.scm)
-(compile -X bind -c++ -s -O2 -d1 -j msgpack -o msgpack.so msgpack.scm)
-(compile msgpack.import.scm -dynamic)
-
-(install-extension
-  'msgpack
-  '("msgpack.so" "msgpack.import.so")
-  '((version "0.1")))
