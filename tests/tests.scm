@@ -24,11 +24,9 @@
 ;;  THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 (declare (not standard-bindings vector-length))
-(load "msgpack-imple")
 (import test
-        srfi-69
-        byte-blob
         chicken.port)
+(include "src/msgpack-imple")
 (include "tests/utils.scm")
 
 (define fast/full 'fast) ; some tests are slow

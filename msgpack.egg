@@ -8,5 +8,6 @@
  (synopsis "MessagePack implementation for CHICKEN")
  (components 
     (extension msgpack
+      (source "src/msgpack.scm")
       (csc-options "-c++")
       (modules msgpack))))

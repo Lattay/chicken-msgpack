@@ -35,5 +35,5 @@
          extension-type extension-data
          extension-type-set! extension-data-set!)
   (import chicken.base)
-  (include "msgpack-imple")
+  (include "src/msgpack-imple")
 )

@@ -38,7 +38,7 @@
         byte-blob
         matchable)
 
-(include "flonum-utils")
+(include "src/flonum-utils")
 
 ;; limits
 (define fixed_uint_limit  127)
