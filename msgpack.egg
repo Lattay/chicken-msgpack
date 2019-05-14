@@ -1,6 +1,6 @@
 ((license "BSD")
  (category parsing)
- (dependencies srfi-1 srfi-69 byte-blob blob-utils bind matchable)
+ (dependencies srfi-1 srfi-69 byte-blob blob-utils matchable)
  (test-dependencies test byte-blob srfi-1)
  (author "Hugo Arregui")
  (maintainer "Théo Cavignac")

@@ -17,11 +17,11 @@ test-python-ref: clean
 
 # Development interface
 msgpack-imple.so:
-	$(PREFIX)/bin/csc -X bind -c++ -s msgpack-imple.scm
+	$(PREFIX)/bin/csc -c++ -s msgpack-imple.scm
 
 # Module interface
 msgpack.so:
-	$(PREFIX)/bin/csc -X bind -c++ -s -j msgpack -o msgpack.so msgpack.scm
+	$(PREFIX)/bin/csc -c++ -s -j msgpack -o msgpack.so msgpack.scm
 	$(PREFIX)/bin/csc msgpack.import.scm -dynamic
 
 clean:

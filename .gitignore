@@ -5,3 +5,5 @@
 tests/python-ref-tests.scm
 run
 msgpack.import.scm
+msgpack.*.sh
+msgpack.link
