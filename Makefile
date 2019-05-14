@@ -26,3 +26,4 @@ msgpack.so:
 
 clean:
 	rm -f tests/*.o *.o run *.c tests/*.c *.so msgpack.import.scm tests/python-ref-tests.scm tests/run
+	rm -f msgpack.*.sh msgpack.link
