@@ -81,7 +81,7 @@
 
   (test-group "uint"
     (let ((c #\a))
-      (test "char" (pack/unpack c) (char->integer c)))
+      (test "char" (char->integer c) (pack/unpack c)))
     (let ((mapper (lambda (x) (+ x 1)))
 	  (v 30))
       (mapper-test "uint mapper" v mapper))
@@ -145,7 +145,7 @@
   (test-group "array"
     (test-error "invalid: number" (packs -1 pack-array))
     (let ((list '(1 2 3 4)))
-      (test "list" (pack/unpack list) (list->vector list)))
+      (test "list" (list->vector list) (pack/unpack list)))
     (pack/unpack-test "fixed array" (make-vector 1 1))
     (pack/unpack-test "fixed array: uint and raw" `#(1 2 ,(string->byte-blob "hola")))
     (pack/unpack-test "array16" (make-vector 40 1))
@@ -172,7 +172,7 @@
     (byte-blob-uref (pack/as-blob value) 0))
 
   (define (test-header name value header)
-    (test name (packed-header value) (hash-table-ref constant-repr-map header)))
+    (test name (hash-table-ref constant-repr-map header) (packed-header value)))
 
   (define (test-limit type min max)
     (test-header (string-append (symbol->string type) " min") min type)
