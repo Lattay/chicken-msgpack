@@ -23,7 +23,7 @@
 ;;  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 ;;  THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-(declare (not standard-bindings vector-length))
+(declare (not standard-bindings scheme#vector-length))
 (import chicken.port
         test)
 (include "tests/utils.scm")
