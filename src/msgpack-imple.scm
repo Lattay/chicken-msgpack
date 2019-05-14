@@ -29,7 +29,8 @@
         chicken.bitwise
         chicken.blob
         chicken.format
-        chicken.io)
+        chicken.io
+        chicken.port)
 (import srfi-1
         srfi-69
         byte-blob
@@ -532,3 +533,9 @@
             ((fixed-array? value) ((Array 'unpack 'fixed) port value mapper))
             ((fixed-map? value)   ((Map   'unpack 'fixed) port value mapper))
             (#t                   (error 'unpack "cannot unpack" value))))))
+
+(define (pack/byte-blob value)
+    (string->byte-blob (call-with-output-string (cut pack <> value))))
+
+(define (unpack/byte-blob blob #!optional (mapper identity))
+  (call-with-input-string (byte-blob->string blob) (cut unpack <> mapper)))
