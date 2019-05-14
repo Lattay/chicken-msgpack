@@ -25,5 +25,5 @@ msgpack.so:
 	$(PREFIX)/bin/csc msgpack.import.scm -dynamic
 
 clean:
-	rm -f tests/*.o *.o run *.c tests/*.c *.so msgpack.import.scm tests/python-ref-tests.scm tests/run
+	rm -f tests/*.o *.o run *.c tests/*.c *.so msgpack.import.scm tests/python-ref-tests.scm tests/run src/*.c src/*.so
 	rm -f msgpack.*.sh msgpack.link

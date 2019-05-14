@@ -23,7 +23,10 @@
 ;;  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 ;;  THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-(import chicken.random
+(import srfi-69
+        test
+        chicken.random
+        byte-blob
         srfi-1)
 
 (define (empty-string? s)

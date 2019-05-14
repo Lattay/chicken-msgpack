@@ -27,7 +27,8 @@
 
 (import srfi-4
         chicken.foreign)
-(import byte-blob blob-set-int)
+(import byte-blob
+        blob-set-int)
 
 (define (byte-blob->float bblob)
   (let ((v (byte-blob->u8vector bblob)))

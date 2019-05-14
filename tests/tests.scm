@@ -24,10 +24,10 @@
 ;;  THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 (declare (not standard-bindings vector-length))
-(import test
-        chicken.port)
-(include "src/msgpack-imple")
+(import chicken.port
+        test)
 (include "tests/utils.scm")
+(include "src/msgpack-imple.scm")
 
 (define fast/full 'fast) ; some tests are slow
 

@@ -26,11 +26,8 @@
 ;;  THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 (import scheme
-        srfi-4
-        chicken.base
         chicken.bitwise
         chicken.blob
-        chicken.foreign
         chicken.format
         chicken.io)
 (import srfi-1
