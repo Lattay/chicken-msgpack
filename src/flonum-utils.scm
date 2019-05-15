@@ -25,77 +25,24 @@
 ;;  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 ;;  THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-(import srfi-4
-        chicken.foreign)
-(import byte-blob
-        blob-set-int)
+(import srfi-4)
 
-(define (byte-blob->float bblob)
-  (let ((v (byte-blob->u8vector bblob)))
-    (assert (= (u8vector-length v) 4))
-    (u8vector->float v)))
+(define (blob->float blob)
+  (let ((v (blob->f32vector/shared blob)))
+    (assert (= (f32vector-length v) 1))
+    (f32vector-ref v 0)))
 
-(define u8vector->float
-  (foreign-lambda* float ((nonnull-u8vector v))
-#<<EOS
-     union { uint32_t i; float f; } mem;
-     memcpy(&mem.i, v, 8);
-     C_return(mem.f);
-EOS
-))
+(define (blob->double blob)
+  (let ((v (blob->f64vector/shared blob)))
+    (assert (= (f64vector-length v) 1))
+    (f64vector-ref v 0)))
 
-(define float->uint32 
-  (foreign-lambda* unsigned-integer32 ((float f))
-#<<EOS
-     union { float f; uint32_t i; } mem;
-     mem.f = f;
-     C_return(mem.i);
-EOS
-))
+(define (float->blob value)
+  (let ((v (make-f32vector 1)))
+    (f32vector-set! v 0 value)
+    (f32vector->blob/shared v)))
 
-(define (byte-blob->double bblob)
-  (let ((v (byte-blob->u8vector bblob)))
-    (assert (= (u8vector-length v) 8))
-    (u8vector->double v)))
-
-(define u8vector->double
-  (foreign-lambda* double ((nonnull-u8vector v))
-#<<EOS
-     union { uint64_t i; double d; } mem;
-     memcpy(&mem.i, v, 8);
-     C_return(mem.d);
-EOS
-))
-
-(define double->uint16
-  (foreign-lambda* void ((double d) 
-                         ((ref unsigned-integer32) b1) 
-                         ((ref unsigned-integer32) b2)
-                         ((ref unsigned-integer32) b3)
-                         ((ref unsigned-integer32) b4))
-#<<EOS
-     union { double d; uint64_t i; } mem;
-     mem.d = d;
-     b1 = mem.i & 0xffff;
-     b2 = (mem.i >> 16) & 0xffff;
-     b3 = (mem.i >> 32) & 0xffff;
-     b4 = (mem.i >> 48) & 0xffff;
-EOS
-))
-
-(define (double->byte-blob value)
-  (let-location ((b1 unsigned-integer32)
-                 (b2 unsigned-integer32)
-                 (b3 unsigned-integer32)
-                 (b4 unsigned-integer32))
-                (double->uint16 value 
-                                (location b1) 
-                                (location b2)
-                                (location b3)
-                                (location b4))
-                (let ((blob (make-blob 8)))
-                  (blob-set-u16-be! blob b1 6)
-                  (blob-set-u16-be! blob b2 4)
-                  (blob-set-u16-be! blob b3 2)
-                  (blob-set-u16-be! blob b4 0)
-                  (blob->byte-blob blob))))
+(define (double->blob value)
+  (let ((v (make-f64vector 1)))
+    (f64vector-set! v 0 value)
+    (f64vector->blob/shared v)))

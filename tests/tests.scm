@@ -24,6 +24,7 @@
 ;;  THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 (declare (not standard-bindings scheme#vector-length))
+(declare (not extended-bindings chicken.blob#blob-size))
 (import chicken.port
         test)
 (include "tests/utils.scm")
@@ -95,10 +96,11 @@
 
   (test-group "flonum"
     (let ((mapper (lambda (x) (+ x 1)))
-	  (v 3.7))
+          (v 3.7))
       (mapper-test "float32 mapper" v mapper pack-float)
       (mapper-test "double64 mapper" v mapper))
     (pack/unpack-test "float32" 1.3 identity pack-float)
+    (pack/unpack-test "float32" 1.3313 identity pack-float)
     (pack/unpack-test "double64" 1.3))
 
   (test-group "sint"
@@ -123,31 +125,31 @@
 
   (test-group "bin"
     (test-error "invalid: number" (packs -1 pack-bin))
-    (let ((v (string->byte-blob "hola")))
-      (mapper-test "bin mapper" v byte-blob->string))
-    (pack/unpack-test "bin8" (make-byte-blob 40))
-    (pack/unpack-test "bin16" (make-byte-blob 40))
+    (let ((v (string->blob "hola")))
+      (mapper-test "bin mapper" v blob->string))
+    (pack/unpack-test "bin8" (make-random-blob 40))
+    (pack/unpack-test "bin16" (make-random-blob 40))
     (if (eq? fast/full 'full)
-      (pack/unpack-test "bin32" (make-byte-blob (expt 2 17)))))
+      (pack/unpack-test "bin32" (make-random-blob (expt 2 17)))))
 
   (test-group "ext"
-    (test-error "invalid ext type" (packs (make-extension 200 (make-byte-blob 1)) pack-ext))
-    (pack/unpack-test "fixext1"  (make-extension 1 (make-byte-blob 1)))
-    (pack/unpack-test "fixext2"  (make-extension 1 (make-byte-blob 2)))
-    (pack/unpack-test "fixext4"  (make-extension 1 (make-byte-blob 4)))
-    (pack/unpack-test "fixext8"  (make-extension 1 (make-byte-blob 8)))
-    (pack/unpack-test "fixext16" (make-extension 1 (make-byte-blob 16)))
-    (pack/unpack-test "ext8"     (make-extension 1 (make-byte-blob 17)))
-    (pack/unpack-test "ext16"    (make-extension 1 (make-byte-blob raw16_limit)))
+    (test-error "invalid ext type" (packs (make-extension 200 (make-random-blob 1)) pack-ext))
+    (pack/unpack-test "fixext1"  (make-extension 1 (make-random-blob 1)))
+    (pack/unpack-test "fixext2"  (make-extension 1 (make-random-blob 2)))
+    (pack/unpack-test "fixext4"  (make-extension 1 (make-random-blob 4)))
+    (pack/unpack-test "fixext8"  (make-extension 1 (make-random-blob 8)))
+    (pack/unpack-test "fixext16" (make-extension 1 (make-random-blob 16)))
+    (pack/unpack-test "ext8"     (make-extension 1 (make-random-blob 17)))
+    (pack/unpack-test "ext16"    (make-extension 1 (make-random-blob raw16_limit)))
     (if (eq? fast/full 'full)
-      (pack/unpack-test "ext32"  (make-extension 1 (make-byte-blob (add1 raw16_limit))))))
+      (pack/unpack-test "ext32"  (make-extension 1 (make-random-blob (add1 raw16_limit))))))
 
   (test-group "array"
     (test-error "invalid: number" (packs -1 pack-array))
     (let ((list '(1 2 3 4)))
       (test "list" (list->vector list) (pack/unpack list)))
     (pack/unpack-test "fixed array" (make-vector 1 1))
-    (pack/unpack-test "fixed array: uint and raw" `#(1 2 ,(string->byte-blob "hola")))
+    (pack/unpack-test "fixed array: uint and raw" `#(1 2 ,(string->blob "hola")))
     (pack/unpack-test "array16" (make-vector 40 1))
     (pack/unpack-test "nested array" '#(1 2 #(1 4)))
     (if (eq? fast/full 'full)
@@ -166,10 +168,10 @@
 
 (test-group "limits"
   (define (pack/as-blob value)
-    (string->byte-blob (call-with-output-string (cut pack <> value))))
+    (string->blob (call-with-output-string (cut pack <> value))))
 
   (define (packed-header value)
-    (byte-blob-uref (pack/as-blob value) 0))
+    (blob-uref (pack/as-blob value) 0))
 
   (define (test-header name value header)
     (test name (hash-table-ref constant-repr-map header) (packed-header value)))
@@ -213,17 +215,17 @@
 
   (test-group "bin"
     (define (test-bin-limit type min max)
-      (test-container-limit byte-blob-length type (byte-blob-empty) min max))
+      (test-container-limit blob-size type (make-blob 0) min max))
 
     (with-mocks ((write-raw (lambda (port value size) #t)))
 		(test-bin-limit 'bin8  (+ 1 fixed_raw_limit) raw8_limit)
 		(test-bin-limit 'bin16 (+ 1 raw8_limit)      raw16_limit)
 		(test-bin-limit 'bin32 (+ 1 raw16_limit)     raw32_limit)
-		(test-container-out-of-limit byte-blob-length raw32_limit (byte-blob-empty))))
+		(test-container-out-of-limit blob-size raw32_limit (make-blob 0))))
 
   (test-group "str"
     (define (test-str-limit type min max)
-      (test-container-limit byte-blob-length type "" min max))
+      (test-container-limit blob-size type "" min max))
 
     (with-mocks ((write-raw (lambda (port value size) #t)))
 		(test-assert "fixed str min" (fixed-str? (packed-header "")))
@@ -231,7 +233,7 @@
 		(test-str-limit 'str8  (+ 1 fixed_raw_limit) raw8_limit)
 		(test-str-limit 'str16 (+ 1 raw8_limit)      raw16_limit)
 		(test-str-limit 'str32 (+ 1 raw16_limit)     raw32_limit)
-		(test-container-out-of-limit byte-blob-length raw32_limit (byte-blob-empty))))
+		(test-container-out-of-limit blob-size raw32_limit (make-blob 0))))
 
   (test-group "array"
     (define (test-array-limit type min max)

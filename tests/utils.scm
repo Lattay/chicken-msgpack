@@ -24,9 +24,10 @@
 ;;  THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 (import srfi-69
+        srfi-4
         test
         chicken.random
-        byte-blob
+        chicken.blob
         srfi-1)
 
 (define (empty-string? s)
@@ -50,8 +51,8 @@
            #f)))
   test-equals?)
 
-(define (make-byte-blob size)
-  (byte-blob-replicate size (pseudo-random-integer 256)))
+(define (make-random-blob size)
+  (u8vector->blob/shared (make-u8vector size (pseudo-random-integer 256))))
 
 (define (random-generator #!key (size 1000))
   (let ((rnd (pseudo-random-integer size))
@@ -59,7 +60,7 @@
     (cond ((< rnd (* size .01))
            (vector-ref '#(#t #f ()) (pseudo-random-integer 3)))
           ((odd? rnd)
-           (make-byte-blob (+ (pseudo-random-integer 12) 1)))
+           (make-random-blob (+ (pseudo-random-integer 12) 1)))
           (#t
            (if (= 0 rnd2)
              rnd
