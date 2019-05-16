@@ -538,6 +538,9 @@
           (#t
            (error (format "I don't know how to handle: ~A" value))))))
 
+(define (pack/blob value)
+    (string->blob (call-with-output-string (cut pack <> value))))
+
 (define (unpack port #!optional (mapper identity))
   (let ((value (read-byte port)))
     (if (eof-object? value)
@@ -563,9 +566,6 @@
             ((fixed-array? value) ((Array 'unpack 'fixed) port value mapper))
             ((fixed-map? value)   ((Map   'unpack 'fixed) port value mapper))
             (#t                   (error 'unpack "cannot unpack" value))))))
-
-(define (pack/blob value)
-    (string->blob (call-with-output-string (cut pack <> value))))
 
 (define (unpack/blob blob #!optional (mapper identity))
   (call-with-input-string (blob->string blob) (cut unpack <> mapper)))
