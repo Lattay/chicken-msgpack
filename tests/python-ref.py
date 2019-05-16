@@ -34,11 +34,15 @@ with open('tests/python-ref-tests.scm', 'w') as f:
     append_assert(-1)
     append_assert(-100)
     append_assert(100)
+    append_assert(-16384)
+    append_assert(16384)
+    append_assert(56213)
+    append_assert(-56213)
     append_assert(100102831903)
     append_assert(-100102831903)
     append_assert(1.3313)
-    append_assert(-7.8125653265e-200)
-    append_assert(-7.8125653265e-231)
+    append_assert(-7.8125653266e-200)
+    append_assert(-7.8125653266e-231)
     append_assert([], '\'#()')
     append_assert(
         [10, True, ['hi']],

@@ -78,3 +78,6 @@
   table)
 
 (current-test-comparator (build-test-equals? (current-test-comparator)))
+
+(define (blob-uref blob index)
+  (u8vector-ref (blob->u8vector/shared blob) index))

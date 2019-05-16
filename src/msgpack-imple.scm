@@ -31,12 +31,11 @@
         chicken.format
         chicken.io
         chicken.port
-        chicken.platform)
+        chicken.platform
+        srfi-4)
 (import srfi-1
         srfi-69
         matchable)
-
-(include "src/flonum-utils")
 
 ;; limits
 (define fixed_uint_limit  127)
@@ -94,10 +93,18 @@
                     (fixext8  . #xd7)
                     (fixext16 . #xd8)))
 
-(define-record extension type data)
+(define constant-repr-map (alist->hash-table constants))
 
-(define (blob-uref blob i)
-  (u8vector-ref (blob->u8vector/shared blob) i))
+(define repr-constant-map
+  (alist->hash-table (map (lambda (entry)
+                            (cons (cdr entry) (car entry))) constants)))
+
+;; byte manipulation primitives
+(define (byte-complement2 n)
+  (add1 (- 255 n)))
+
+(define (xff- n)
+  (- 255 n))
 
 (define (blob-reverse blob)
   (let* ((size (blob-size blob))
@@ -110,6 +117,8 @@
             (loop (add1 index)))
           (u8vector->blob/shared new)))))
 
+; msgpack impose big endianness
+; intel processors are little endian
 (define to-big-endian
   (if (eq? (machine-byte-order) 'big-endian)
       identity
@@ -120,84 +129,41 @@
       identity
       blob-reverse))
 
-(define make-extension
-  (let ((old-make-extension make-extension))
-    (lambda (type data)
-      (if (or (not (integer? type))
-              (< type 0)
-              (> type 127))
-        (error (format "invalid type ~A, it should be a number between 0 and 127" type)))
-      (if (not (blob? data))
-        (error (format "invalid data ~A, it should be a blob" data)))
-      (old-make-extension type data))))
+(define (float->blob value size)
+  (case size
+    ((4) (f32vector->blob/shared (make-f32vector 1 value)))
+    ((8) (f64vector->blob/shared (make-f64vector 1 value)))
+    (else (error (format "invalid size ~A for a float, it should be 4 or 8" size)))))
 
-(define constant-repr-map (alist->hash-table constants))
+(define (blob->float blob)
+  (case (blob-size blob)
+    ((4) (f32vector-ref (blob->f32vector/shared blob) 0))
+    ((8) (f64vector-ref (blob->f64vector/shared blob) 0))
+    (else (error (format "invalid blob size ~A for a float, it should be 4 or 8" (blob-size blob))))))
 
-(define repr-constant-map
-  (alist->hash-table (map (lambda (entry)
-                            (cons (cdr entry) (car entry))) constants)))
 
-(define (read-byte/eof-error port)
-  (let ((b (read-byte port)))
-    (if (eof-object? b)
-      (error "premature eof")
-      b)))
-
-;; byte manipulation primitives
-(define (byte-complement2 n)
-  (add1 (- 255 n)))
-
-(define (get-smallest-byte n)
-  (bitwise-and #xff n))
-
-(define (write-bytes port value size)
-  (if (> size 0)
-    (let* ((shift_size (- size 1))
-           (byte (get-smallest-byte (arithmetic-shift value (- (* 8 shift_size))))))
-      (write-byte byte port)
-      (write-bytes port value shift_size))))
-
-(define (read-bytes* port size)
-  (map
-    (lambda (e)
-      (read-byte/eof-error port))
-    (iota size)))
-
-(define (bytes->number bytes f)
-  (let* ((size (length bytes)))
-    (apply bitwise-ior
-           (map
-             (lambda (byte shift_size)
-               (arithmetic-shift (f byte) shift_size))
-             bytes
-             (iota size (* (sub1 size) 8) -8)))))
-
-(define (read-uint port size #!optional (mapper identity))
-  (mapper (bytes->number (read-bytes* port size) identity)))
-
-(define (read-sint port size #!optional (mapper identity))
-  (let ((bytes (read-bytes* port size)))
-    (mapper
-      (if (bit->boolean (car bytes) 7) ; its negative
-        (- (add1 (bytes->number bytes (cut - 255 <>))))
-        (bytes->number bytes identity)))))
+;;;;;;;;;; Writers
 
 (define (write-raw port blob size)
-  (assert (blob? blob) "write-raw: expected blob" blob)
-  (let loop ((index 0))
-    (if (< index size)
-      (let ((byte (blob-uref blob index)))
-        (write-byte byte port)
+  (assert (or (blob? blob) (u8vector? blob)) "write-raw: expected blob" blob)
+  (let ((vec (if (blob? blob) (blob->u8vector/shared blob) blob)))
+    (let loop ((index 0))
+      (when (< index size)
+        (write-byte (u8vector-ref vec index) port)
         (loop (add1 index))))))
 
-(define (read-raw port size #!optional (mapper identity))
-  (let ((data (make-u8vector size)))
-    (let loop ((index 0))
-      (if (< index size)
-          (let ((byte (read-byte/eof-error port)))
-            (u8vector-set! data index byte)
-            (loop (add1 index)))
-          (mapper (u8vector->blob data))))))
+(define (write-int port value size)
+  (if (= size 1)  ; special case of one byte for efficiency
+      (write-byte value port)
+      (let ((vblob (make-u8vector size)))
+        (let loop ((index 0) (value value))
+          (when (< index size)
+            (u8vector-set! vblob (- size index 1) (bitwise-and #xff value))
+            (loop (add1 index) (arithmetic-shift value -8))))
+        (write-raw port vblob size))))
+
+(define (write-float port value size)
+  (write-raw port (to-big-endian (float->blob value size)) size))
 
 (define (write-array port value size)
   (assert (= (vector-length value) size) "write-array: invalid size" size)
@@ -216,6 +182,41 @@
   (let ((header (hash-table-ref constant-repr-map type)))
     (write-byte header port)))
 
+;;;;;;;;;; Readers
+
+(define (read-byte/eof-error port)
+  (let ((b (read-byte port)))
+    (if (eof-object? b)
+      (error "premature eof")
+      b)))
+
+(define (read-raw port size #!optional (mapper identity))
+  (let ((data (make-u8vector size)))
+    (let loop ((index 0))
+      (if (< index size)
+          (let ((byte (read-byte/eof-error port)))
+            (u8vector-set! data index byte)
+            (loop (add1 index)))
+          (mapper (u8vector->blob data))))))
+
+(define (read-uint port size #!optional (mapper identity))
+  (if (= size 1)  ; special case of one byte for efficiency
+      (read-byte/eof-error port)
+      (let loop ((index 0) (value 0))
+        (if (< index size)
+            (loop (add1 index) (+ (arithmetic-shift value 8) (read-byte port)))
+            (mapper value)))))
+
+(define (read-sint port size #!optional (mapper identity))
+  (let loop ((index 0) (value 0))
+    (if (< index size)
+        (loop (add1 index) (+ (arithmetic-shift value 8) (xff- (read-byte port))))
+        (mapper (- (add1 value))))))
+
+(define (read-float port size #!optional (mapper identity))
+  (mapper (blob->float (from-big-endian (read-raw port size)))))
+
+; Decode header
 (define (fixed-uint? value)
   (= (bitwise-and #x80 value) 0))
 
@@ -239,7 +240,7 @@
   (let* ((lowrite
            (lambda (port value header size)
              (write-header port header)
-             (write-bytes port value size)))
+             (write-int port value size)))
          (read-uint
            read-uint)
          (pack
@@ -268,7 +269,7 @@
   (let* ((lowrite
            (lambda (port value header size)
              (write-header port header)
-             (write-bytes port value size)))
+             (write-int port value size)))
          (read-sint
            read-sint)
          (pack
@@ -280,7 +281,7 @@
                    ((> value 0)
                     ((Uint 'pack) port value))
                    ((>= value fixed_int_limit)
-                    (let ((header (bitwise-ior #xe0 (get-smallest-byte value))))
+                    (let ((header (bitwise-ior #xe0 (bitwise-and #xff value))))
                       (write-byte header port)))
                    ((>= value int8_limit)  (lowrite port value 'int8  1))
                    ((>= value int16_limit) (lowrite port value 'int16 2))
@@ -293,44 +294,38 @@
       (('unpack 'int32) (cut read-sint <> 4 <>))
       (('unpack 'int64) (cut read-sint <> 8 <>))
       (('unpack 'fixed)  (lambda (port value mapper)
-                           (mapper (- (byte-complement2 value)))))
+                           (mapper (- (add1 (xff- value))))))
       (('pack)           pack))))
 
 (define Float
-  (let* ((write-float
-           (lambda (port value)
-             (write-raw port (to-big-endian (float->blob value)) 4)))
-         (read-float
+  (let* ((unpack
            (lambda (port #!optional (mapper identity))
-             (mapper (blob->float (from-big-endian (read-raw port 4))))))
+             (mapper (read-float port 4))))
          (pack
            (lambda (port value)
              (write-header port 'float)
-             (write-float port value))))
+             (write-float port value 4))))
     (match-lambda
-      ('unpack read-float)
+      ('unpack unpack)
       ('pack pack))))
 
 (define Double
-  (let* ((write-double
-           (lambda (port value)
-             (write-raw port (to-big-endian (double->blob value)) 8)))
-         (read-double
+  (let* ((unpack
            (lambda (port #!optional (mapper identity))
-             (mapper (blob->double (from-big-endian (read-raw port 8))))))
+             (mapper (read-float port 8))))
          (pack
            (lambda (port value)
              (write-header port 'double)
-             (write-double port value))))
+             (write-float port value 8))))
     (match-lambda
-      ('unpack read-double)
+      ('unpack unpack)
       ('pack pack))))
 
 (define Array
   (let* ((lowrite
            (lambda (port value header header-size size)
              (write-header port header)
-             (write-bytes port size header-size)
+             (write-int port size header-size)
              (write-array port value size)))
          (read-array
            (lambda (port size #!optional (mapper identity))
@@ -364,7 +359,7 @@
   (let* ((lowrite
            (lambda (port value header header-size size)
              (write-header port header)
-             (write-bytes port size header-size)
+             (write-int port size header-size)
              (write-map port value size)))
          (read-map
            (lambda (port size #!optional (mapper identity))
@@ -400,7 +395,7 @@
   (let* ((lowrite
            (lambda (port value header header-size size)
              (write-header port header)
-             (write-bytes port size header-size)
+             (write-int port size header-size)
              (write-raw port value size)))
          (read-str
            (lambda (port size #!optional (mapper identity))
@@ -432,7 +427,7 @@
   (let* ((lowrite
            (lambda (port value header header-size size)
              (write-header port header)
-             (write-bytes port size header-size)
+             (write-int port size header-size)
              (write-raw port value size)))
          (read-bin
            read-raw)
@@ -452,17 +447,31 @@
       (('unpack 'bin32) (lambda (port mapper) (read-bin port (read-uint port 4) mapper)))
       (('pack)          pack))))
 
+
+(define-record extension type data)
+
+(define make-extension
+  (let ((old-make-extension make-extension))
+    (lambda (type data)
+      (if (or (not (integer? type))
+              (< type 0)
+              (> type 127))
+        (error (format "invalid type ~A, it should be a number between 0 and 127" type)))
+      (if (not (blob? data))
+        (error (format "invalid data ~A, it should be a blob" data)))
+      (old-make-extension type data))))
+
 (define Ext
   (let* ((lowrite
            (lambda (port header type data header-size size)
              (write-header port header)
              (if header-size
-               (write-bytes port size header-size))
-             (write-bytes port type 1)
+               (write-int port size header-size))
+             (write-int port type 1)
              (write-raw port data size)))
          (read-ext
            (lambda (port size mapper)
-             (let* ((type (read-sint port 1))
+             (let* ((type (read-uint port 1))
                     (data (read-raw port size)))
                (mapper (make-extension type data)))))
          (pack (lambda (port value)
@@ -492,6 +501,8 @@
       (('unpack 'ext32)    (lambda (port mapper) (read-ext port (read-uint port 4) mapper)))
       (('pack)             pack))))
 
+;;;;;;;;;;; Public interface
+
 (define pack-uint   (Uint   'pack))
 (define pack-sint   (Sint   'pack))
 (define pack-float  (Float  'pack))
@@ -514,9 +525,6 @@
            (pack-double port value))
           ((blob? value)
            (pack-bin port value))
-; FIXME: Should I consider u8vector a special case of array or not ?
-;          ((u8vector? value)
-;           (pack-bin port (u8vector->blob/shared value)))
           ((string? value)
            (pack-str port value))
           ((extension? value)
@@ -561,3 +569,4 @@
 
 (define (unpack/blob blob #!optional (mapper identity))
   (call-with-input-string (blob->string blob) (cut unpack <> mapper)))
+
