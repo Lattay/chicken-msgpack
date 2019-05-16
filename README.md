@@ -3,31 +3,45 @@ MessagePack implementation for CHICKEN scheme
 
 An implementation of [MessagePack](http://msgpack.org/) for [CHICKEN scheme](https://www.call-cc.org/).
 
+Recently ported to CHICKEN 5 and cleaned up.
+
+Requirements
+------------
+This package require this eggs:
+- matchable
+- srfi-1
+- srfi-69
+
+Installation
+------------
+Until I publish it to the eggs index the simplest way to install this is to clone
+this repository and run `chicken-install -s` inside it.
+
 API Specification
 -----------------
 
 Primitive pack-family procedures:
 
 ```scheme
-(pack-uint PORT value)
-(pack-sint PORT value)
-(pack-float PORT FLONUM)
-(pack-double PORT FLONUM)
-(pack-bin PORT BYTE-BLOB)  ; byte-blob
-(pack-str PORT STRING)     ; string
-(pack-array PORT VECTOR)   ; vector
-(pack-map PORT HASH-TABLE) ; hash-table
-(pack-ext PORT EXT)        ; extension (see below)
+(pack-uint port value)
+(pack-sint port value)
+(pack-float port FLONUM)
+(pack-double port FLONUM)
+(pack-bin port BYTE-BLOB)  ; byte-blob
+(pack-str port STRING)     ; string
+(pack-array port VECTOR)   ; vector
+(pack-map port HASH-TABLE) ; hash-table
+(pack-ext port EXT)        ; extension (see below)
 ```
 
-Additionally, this implementation provides a generic pack procedure:
+Also the simplest way to use is to use the generic procedures:
 
 ```scheme
-(pack PORT value)
+(pack port value)
+(pack/blob value)
 ```
 
-This procedure will call primitive type packers, with the following rules:
-
+These procedures will call primitive type packers, with the following rules:
 - if the value has a packer, apply it.
 - if the value is a string, it will be packed as str.
 - if the value is a blob, it will be packed as bin.
@@ -35,12 +49,15 @@ This procedure will call primitive type packers, with the following rules:
 - if the value is a list, it will be packed as an array.
 - if the value is a extension (see below), it will be packed as an ext
 
+The /blob version return a blob of packed data, the others directly write it to the port.
+
 Unpack procedures:
-
 ```scheme
-(unpack PORT [mapper])
+(unpack port [mapper])
+(unpack/blob blob [mapper])
 ```
-
+The optional mapper argument is applied to the output before returning.
+The /blob version unpack the content of blob instead of reading from a port.
 Extension
 ---------
 
@@ -48,7 +65,7 @@ Extension is record defined as:
 
 ```
 - type: integer from 0 to 127
-- data: a byte-blob
+- data: a blob
 
 (define-record extension type data)
 ```
