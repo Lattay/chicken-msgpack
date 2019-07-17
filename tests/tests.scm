@@ -59,19 +59,19 @@
   (define (pack/unpack-test name value #!optional (mapper identity) (packer pack))
     (let* ((packed-buffer (call-with-output-string (cut packer <> value))))
       (call-with-input-string packed-buffer
-			      (lambda (port)
-				(let ((v (unpack port mapper)))
-				  (test name value v) ; unpacked value is the same that was packed
-				  (test-assert "" (eof-object? (unpack port mapper))) ; no more left
-				  v)))))
+                              (lambda (port)
+                                (let ((v (unpack port mapper)))
+                                  (test name value v) ; unpacked value is the same that was packed
+                                  (test-assert "" (eof-object? (unpack port mapper))) ; no more left
+                                  v)))))
 
   (define (mapper-test name value mapper #!optional (packer pack))
     (let* ((packed-buffer (call-with-output-string (cut packer <> value))))
       (call-with-input-string packed-buffer
-			      (lambda (port)
-				(let ((v (unpack port mapper)))
-				  (test name v (mapper value))
-				  v)))))
+                              (lambda (port)
+                                (let ((v (unpack port mapper)))
+                                  (test name v (mapper value))
+                                  v)))))
 
   (test-group "constants"
     (let ((mapper (lambda (x) (not x))))
@@ -84,7 +84,7 @@
     (let ((c #\a))
       (test "char" (char->integer c) (pack/unpack c)))
     (let ((mapper (lambda (x) (+ x 1)))
-	  (v 30))
+          (v 30))
       (mapper-test "uint mapper" v mapper))
     (test-error "invalid: negative number" (packs -1 pack-uint))
     (test-error "invalid: no integer" (packs '() pack-uint))
@@ -105,7 +105,7 @@
 
   (test-group "sint"
     (let ((mapper (lambda (x) (+ x 1)))
-	  (v -1))
+          (v -1))
       (mapper-test "sint mapper" v mapper))
     (pack/unpack-test "positive" 10)
     (pack/unpack-test "positive" 3000)
@@ -121,7 +121,7 @@
     (pack/unpack-test "str8" (make-string 40))
     (pack/unpack-test "str16" (make-string 40))
     (if (eq? fast/full 'full)
-      (pack/unpack-test "str32" (make-string (expt 2 17)))))
+        (pack/unpack-test "str32" (make-string (expt 2 17)))))
 
   (test-group "bin"
     (test-error "invalid: number" (packs -1 pack-bin))
@@ -130,7 +130,7 @@
     (pack/unpack-test "bin8" (make-random-blob 40))
     (pack/unpack-test "bin16" (make-random-blob 40))
     (if (eq? fast/full 'full)
-      (pack/unpack-test "bin32" (make-random-blob (expt 2 17)))))
+        (pack/unpack-test "bin32" (make-random-blob (expt 2 17)))))
 
   (test-group "ext"
     (test-error "invalid ext type" (packs (make-extension 200 (make-random-blob 1)) pack-ext))
@@ -142,7 +142,7 @@
     (pack/unpack-test "ext8"     (make-extension 1 (make-random-blob 17)))
     (pack/unpack-test "ext16"    (make-extension 1 (make-random-blob raw16_limit)))
     (if (eq? fast/full 'full)
-      (pack/unpack-test "ext32"  (make-extension 1 (make-random-blob (add1 raw16_limit))))))
+        (pack/unpack-test "ext32"  (make-extension 1 (make-random-blob (add1 raw16_limit))))))
 
   (test-group "array"
     (test-error "invalid: number" (packs -1 pack-array))
@@ -153,7 +153,7 @@
     (pack/unpack-test "array16" (make-vector 40 1))
     (pack/unpack-test "nested array" '#(1 2 #(1 4)))
     (if (eq? fast/full 'full)
-      (pack/unpack-test "array32" (make-vector (expt 2 17) 1))))
+        (pack/unpack-test "array32" (make-vector (expt 2 17) 1))))
 
   (test-group "map"
     (test-error "invalid: number" (packs -1 pack-map))
@@ -163,7 +163,7 @@
       (hash-table-set! table 1 (make-rnd-hash-table 2))
       (pack/unpack-test "nested map" table))
     (if (eq? fast/full 'full)
-      (pack/unpack-test "map32" (make-rnd-hash-table (expt 2 17)))))
+        (pack/unpack-test "map32" (make-rnd-hash-table (expt 2 17)))))
   ); end pack/unpack-test
 
 (test-group "limits"
@@ -218,44 +218,44 @@
       (test-container-limit blob-size type (make-blob 0) min max))
 
     (with-mocks ((write-raw (lambda (port value size) #t)))
-		(test-bin-limit 'bin8  (+ 1 fixed_raw_limit) raw8_limit)
-		(test-bin-limit 'bin16 (+ 1 raw8_limit)      raw16_limit)
-		(test-bin-limit 'bin32 (+ 1 raw16_limit)     raw32_limit)
-		(test-container-out-of-limit blob-size raw32_limit (make-blob 0))))
+                (test-bin-limit 'bin8  (+ 1 fixed_raw_limit) raw8_limit)
+                (test-bin-limit 'bin16 (+ 1 raw8_limit)      raw16_limit)
+                (test-bin-limit 'bin32 (+ 1 raw16_limit)     raw32_limit)
+                (test-container-out-of-limit blob-size raw32_limit (make-blob 0))))
 
   (test-group "str"
     (define (test-str-limit type min max)
       (test-container-limit blob-size type "" min max))
 
     (with-mocks ((write-raw (lambda (port value size) #t)))
-		(test-assert "fixed str min" (fixed-str? (packed-header "")))
-		(test-assert "fixed str max" (fixed-str? (packed-header (make-string fixed_raw_limit))))
-		(test-str-limit 'str8  (+ 1 fixed_raw_limit) raw8_limit)
-		(test-str-limit 'str16 (+ 1 raw8_limit)      raw16_limit)
-		(test-str-limit 'str32 (+ 1 raw16_limit)     raw32_limit)
-		(test-container-out-of-limit blob-size raw32_limit (make-blob 0))))
+                (test-assert "fixed str min" (fixed-str? (packed-header "")))
+                (test-assert "fixed str max" (fixed-str? (packed-header (make-string fixed_raw_limit))))
+                (test-str-limit 'str8  (+ 1 fixed_raw_limit) raw8_limit)
+                (test-str-limit 'str16 (+ 1 raw8_limit)      raw16_limit)
+                (test-str-limit 'str32 (+ 1 raw16_limit)     raw32_limit)
+                (test-container-out-of-limit blob-size raw32_limit (make-blob 0))))
 
   (test-group "array"
     (define (test-array-limit type min max)
       (test-container-limit vector-length type '#() min max))
 
     (with-mocks ((write-array (lambda (port value size) #t)))
-		(test-assert "fixed array min" (fixed-array? (packed-header '#())))
-		(test-assert "fixed array max" (fixed-array? (packed-header (make-vector fixed_array_limit 1))))
-		(test-array-limit 'array16 (+ 1 fixed_array_limit) array16_limit)
-		(test-array-limit 'array32 (+ 1 array16_limit) array32_limit)
-		(test-container-out-of-limit vector-length array32_limit '#())))
+                (test-assert "fixed array min" (fixed-array? (packed-header '#())))
+                (test-assert "fixed array max" (fixed-array? (packed-header (make-vector fixed_array_limit 1))))
+                (test-array-limit 'array16 (+ 1 fixed_array_limit) array16_limit)
+                (test-array-limit 'array32 (+ 1 array16_limit) array32_limit)
+                (test-container-out-of-limit vector-length array32_limit '#())))
 
   (test-group "map"
     (define (test-map-limit type min max)
       (test-container-limit hash-table-size type (make-hash-table) min max))
 
     (with-mocks ((write-map (lambda (port value size) #t)))
-		(test-assert "fixed map min" (fixed-map? (packed-header (make-rnd-hash-table 0))))
-		(test-assert "fixed map max" (fixed-map? (packed-header (make-rnd-hash-table fixed_map_limit))))
-		(test-map-limit 'map16 (+ 1 fixed_map_limit) map16_limit)
-		(test-map-limit 'map32 (+ 1 map16_limit) map32_limit)
-		(test-container-out-of-limit hash-table-size map32_limit (make-hash-table))))
+                (test-assert "fixed map min" (fixed-map? (packed-header (make-rnd-hash-table 0))))
+                (test-assert "fixed map max" (fixed-map? (packed-header (make-rnd-hash-table fixed_map_limit))))
+                (test-map-limit 'map16 (+ 1 fixed_map_limit) map16_limit)
+                (test-map-limit 'map32 (+ 1 map16_limit) map32_limit)
+                (test-container-out-of-limit hash-table-size map32_limit (make-hash-table))))
   ) ;end limits test
 
 (test-exit)
