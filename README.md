@@ -3,7 +3,10 @@ MessagePack implementation for CHICKEN scheme
 
 An implementation of [MessagePack](http://msgpack.org/) for [CHICKEN scheme](https://www.call-cc.org/).
 
-Recently ported to CHICKEN 5 and cleaned up.
+Forked from [msgpack-scheme](http://github.com/hugoArregui/msgpack-scheme) and partially rewritten
+(ported to CHICKEN 5 and cleaned up).
+I kept the original license and most of the original API. However the byte-blob have been replaced with
+Chicken 5 native blob.
 
 Requirements
 ------------
@@ -27,7 +30,7 @@ Primitive pack-family procedures:
 (pack-sint port value)
 (pack-float port FLONUM)
 (pack-double port FLONUM)
-(pack-bin port BYTE-BLOB)  ; byte-blob
+(pack-bin port BLOB)  ; chicken.blob byte blob
 (pack-str port STRING)     ; string
 (pack-array port VECTOR)   ; vector
 (pack-map port HASH-TABLE) ; hash-table
@@ -49,7 +52,7 @@ These procedures will call primitive type packers, with the following rules:
 - if the value is a list, it will be packed as an array.
 - if the value is a extension (see below), it will be packed as an ext
 
-The /blob version return a blob of packed data, the others directly write it to the port.
+The `/blob` version return a blob of packed data, the others directly write it to the port.
 
 Unpack procedures:
 ```scheme
@@ -57,18 +60,20 @@ Unpack procedures:
 (unpack/blob blob [mapper])
 ```
 The optional mapper argument is applied to the output before returning.
-The /blob version unpack the content of blob instead of reading from a port.
+The `/blob` version unpack the content of blob instead of reading from a port.
+
+
 Extension
 ---------
 
-Extension is record defined as:
+Extension is a record defined as:
 
 ```
-- type: integer from 0 to 127
-- data: a blob
-
 (define-record extension type data)
 ```
+
+- type: integer from 0 to 127
+- data: a blob
 
 Example:
 
