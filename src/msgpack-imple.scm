@@ -523,6 +523,8 @@
            ((if (>= value 0) pack-uint pack-sint) port value))
           ((flonum? value)
            (pack-double port value))
+          ((exact? value)
+           (pack-double port (exact->inexact value)))
           ((blob? value)
            (pack-bin port value))
           ((string? value)
