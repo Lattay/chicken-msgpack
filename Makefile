@@ -8,6 +8,15 @@ CSC=$(CSC)
 endif
 endif
 
+CSI=
+ifeq ($(CSI),)
+ifeq ($(PREFIX),)
+CSI=csi
+else
+CSI=$(CSI)
+endif
+endif
+
 .PHONY: all test test-python-ref clean
 
 all: msgpack.so
@@ -21,7 +30,7 @@ test: msgpack-imple.so
 test-python-ref: clean
 	$(PREFIX)/bin/chicken-install -s
 	python tests/python-ref.py
-	$(PREFIX)/bin/csi -s tests/python-ref-tests.scm
+	$(CSI) -s tests/python-ref-tests.scm
 
 # Development interface
 msgpack-imple.so:
