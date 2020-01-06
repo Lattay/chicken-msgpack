@@ -157,6 +157,7 @@
 
   (test-group "map"
     (test-error "invalid: number" (packs -1 pack-map))
+    (pack/unpack-test "empty map" (make-rnd-hash-table 0))
     (pack/unpack-test "fixed map" (make-rnd-hash-table 2))
     (pack/unpack-test "map16" (make-rnd-hash-table 40))
     (let ((table (make-rnd-hash-table 10)))
