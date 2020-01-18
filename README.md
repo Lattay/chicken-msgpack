@@ -20,6 +20,8 @@ Installation
 Until I publish it to the eggs index the simplest way to install this is to clone
 this repository and run `chicken-install -s` inside it.
 
+Once published, you can run `chicken-install -s msgpack` anywhere.
+
 API Specification
 -----------------
 
