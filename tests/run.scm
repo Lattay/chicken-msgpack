@@ -27,8 +27,8 @@
 (declare (not extended-bindings chicken.blob#blob-size))
 (import chicken.port
         test)
-(include "tests/utils.scm")
-(include "src/msgpack-imple.scm")
+(include "utils.scm")
+(include "../src/msgpack-imple.scm")
 
 (define fast/full 'fast) ; some tests are slow
 

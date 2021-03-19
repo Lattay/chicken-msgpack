@@ -7,6 +7,7 @@ Forked from [msgpack-scheme](http://github.com/hugoArregui/msgpack-scheme) and p
 (ported to CHICKEN 5 and cleaned up).
 I kept the original license and most of the original API. However the byte-blob have been replaced with
 Chicken 5 native blob.
+I removed the dependency on bind egg and the need for C++ code using built-ins features of C5.
 
 Authors
 -------
@@ -15,7 +16,6 @@ Théo Cavignac: ported the egg to Chicken 5
 
 Repository
 ----------
-
 Find the code at [github.com](https://github.com/Lattay/chicken-msgpack).
 
 Requirements
@@ -37,18 +37,17 @@ Finally run `chicken-install -s` in the root of this repository.
 
 API Specification
 -----------------
-
 Primitive pack-family procedures:
 
 ```scheme
-(pack-uint port value)
+(pack-uint port value)     ; will produce an error if the input is negative
 (pack-sint port value)
-(pack-float port FLONUM)
-(pack-double port FLONUM)
-(pack-bin port BLOB)  ; chicken.blob byte blob
+(pack-float port FLONUM)   ; pack 32b floats, support both exact and inexact but convert to flonum (inexact) anyway
+(pack-double port FLONUM)  ; pack 64b floats, same limitations as above
+(pack-bin port BLOB)       ; chicken.blob byte blob
 (pack-str port STRING)     ; string
-(pack-array port VECTOR)   ; vector
-(pack-map port HASH-TABLE) ; hash-table
+(pack-array port VECTOR)   ; scheme vector, also support lists
+(pack-map port HASH-TABLE) ; srfi-69 hash-table
 (pack-ext port EXT)        ; extension (see below)
 ```
 
@@ -80,7 +79,6 @@ The `/blob` version unpack the content of blob instead of reading from a port.
 
 Extension
 ---------
-
 Extension is a record defined as:
 
 ```
@@ -99,12 +97,10 @@ Example:
 
 License
 -------
-
 Distributed under the New BSD License.
 
 History
 -------
-
 v1.0.3 Ironing details for publication.
 
 v1.0.0 Port to Chicken 5.

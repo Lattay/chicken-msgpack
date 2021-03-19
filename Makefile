@@ -23,7 +23,7 @@ all: msgpack.so doc
 
 # Development tests
 test: msgpack-imple.so
-	$(CSI) -I tests/ tests/run.scm
+	cd tests; $(CSI) run.scm
 
 # Post install tests
 test-python-ref: clean
@@ -42,7 +42,7 @@ msgpack.so:
 
 doc: README.svnwiki
 
-README.svnwiki:
+README.svnwiki: README.md
 	markdown-svnwiki -o README.svnwiki README.md
 
 clean:
