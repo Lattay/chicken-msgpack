@@ -23,8 +23,7 @@ all: msgpack.so
 
 # Development tests
 test: msgpack-imple.so
-	$(CSC) -I tests/ tests/tests.scm -o run
-	./run
+	$(CSI) -I tests/ tests/run.scm
 
 # Post install tests
 test-python-ref: clean
@@ -40,6 +39,9 @@ msgpack-imple.so:
 msgpack.so:
 	$(CSC) -s -j msgpack -o msgpack.so src/msgpack.scm
 	$(CSC) msgpack.import.scm -dynamic
+
+doc:
+	markdown-svnwiki -o README.svnwiki README.md
 
 clean:
 	rm -f tests/*.o *.o run *.c tests/*.c *.so msgpack.import.scm tests/python-ref-tests.scm tests/run src/*.c src/*.so
