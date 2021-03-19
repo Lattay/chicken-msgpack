@@ -19,7 +19,7 @@ endif
 
 .PHONY: all test test-python-ref clean
 
-all: msgpack.so
+all: msgpack.so doc
 
 # Development tests
 test: msgpack-imple.so
@@ -40,7 +40,9 @@ msgpack.so:
 	$(CSC) -s -j msgpack -o msgpack.so src/msgpack.scm
 	$(CSC) msgpack.import.scm -dynamic
 
-doc:
+doc: README.svnwiki
+
+README.svnwiki:
 	markdown-svnwiki -o README.svnwiki README.md
 
 clean:

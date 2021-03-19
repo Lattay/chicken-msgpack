@@ -8,6 +8,16 @@ Forked from [msgpack-scheme](http://github.com/hugoArregui/msgpack-scheme) and p
 I kept the original license and most of the original API. However the byte-blob have been replaced with
 Chicken 5 native blob.
 
+Authors
+-------
+Hugo Arregui: Original author of the egg.
+Théo Cavignac: ported the egg to Chicken 5
+
+Repository
+----------
+
+Find the code at [github.com](https://github.com/Lattay/chicken-msgpack).
+
 Requirements
 ------------
 This package requires the following eggs:
@@ -91,3 +101,14 @@ License
 -------
 
 Distributed under the New BSD License.
+
+History
+-------
+
+v1.0.3 Ironing details for publication.
+
+v1.0.0 Port to Chicken 5.
+Breaking changes:
+All blob related APIs have been changed to support Chicken native blob type.
+
+v0.4 Last Chicken 4 version (2016)
