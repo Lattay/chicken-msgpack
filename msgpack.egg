@@ -4,7 +4,7 @@
  (test-dependencies matchable srfi-1 srfi-69 test)
  (author "Hugo Arregui")
  (maintainer "Théo Cavignac")
- (version "1.0.2")
+ (version "1.0.4")
  (synopsis "MessagePack implementation for CHICKEN")
  (components 
     (extension msgpack
