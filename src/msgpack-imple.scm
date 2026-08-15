@@ -25,14 +25,14 @@
 ;;  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 ;;  THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-(import scheme
+(import scheme.base
         chicken.bitwise
-        chicken.blob
+        chicken.bytevector
         chicken.format
         chicken.io
+        chicken.number-vector
         chicken.port
-        chicken.platform
-        srfi-4)
+        chicken.platform)
 (import srfi-1
         srfi-69
         matchable)
@@ -106,64 +106,52 @@
 (define (xff- n)
   (- 255 n))
 
-(define (blob-reverse blob)
-  (let* ((size (blob-size blob))
-         (old (blob->u8vector/shared blob))
-         (new (make-u8vector size)))
+(define (bytevector-reverse bv)
+  (let* ((size (bytevector-length bv))
+         (new (make-bytevector size)))
     (let loop ((index 0))
       (if (< index size)
           (begin
-            (u8vector-set! new index (u8vector-ref old (- size index 1)))
+            (bytevector-u8-set! new index (bytevector-u8-ref bv (- size index 1)))
             (loop (add1 index)))
-          (u8vector->blob/shared new)))))
+          new))))
 
 ; msgpack impose big endianness
 ; intel processors are little endian
 (define to-big-endian
   (if (eq? (machine-byte-order) 'big-endian)
       identity
-      blob-reverse))
+      bytevector-reverse))
 
 (define from-big-endian
   (if (eq? (machine-byte-order) 'big-endian)
       identity
-      blob-reverse))
+      bytevector-reverse))
 
-(define (float->blob value size)
+(define (float->bytevector value size)
   (case size
-    ((4) (f32vector->blob/shared (make-f32vector 1 value)))
-    ((8) (f64vector->blob/shared (make-f64vector 1 value)))
+    ((4) (f32vector->bytevector/shared (f32vector value)))
+    ((8) (f64vector->bytevector/shared (f64vector value)))
     (else (error (format "invalid size ~A for a float, it should be 4 or 8" size)))))
 
-(define (blob->float blob)
-  (case (blob-size blob)
-    ((4) (f32vector-ref (blob->f32vector/shared blob) 0))
-    ((8) (f64vector-ref (blob->f64vector/shared blob) 0))
-    (else (error (format "invalid blob size ~A for a float, it should be 4 or 8" (blob-size blob))))))
+(define (bytevector->float bv)
+  (case (bytevector-length bv)
+    ((4) (f32vector-ref (bytevector->f32vector/shared bv) 0))
+    ((8) (f64vector-ref (bytevector->f64vector/shared bv) 0))
+    (else (error (format "invalid bytevector size ~A for a float, it should be 4 or 8" (bytevector-length bv))))))
 
 
 ;;;;;;;;;; Writers
 
-(define (write-raw port blob size)
-  (assert (or (blob? blob) (u8vector? blob)) "write-raw: expected blob" blob)
-  (let ((vec (if (blob? blob) (blob->u8vector/shared blob) blob)))
-    (let loop ((index 0))
-      (when (< index size)
-        (write-byte (u8vector-ref vec index) port)
-        (loop (add1 index))))))
-
 (define (write-int port value size)
   (if (= size 1)  ; special case of one byte for efficiency
       (write-byte value port)
-      (let ((vblob (make-u8vector size)))
-        (let loop ((index 0) (value value))
-          (when (< index size)
-            (u8vector-set! vblob (- size index 1) (bitwise-and #xff value))
-            (loop (add1 index) (arithmetic-shift value -8))))
-        (write-raw port vblob size))))
+      (do ((i (* 8 (sub1 size)) (- i 8)))
+          ((negative? i))
+        (write-byte (bitwise-and (arithmetic-shift value (- i)) #xff) port))))
 
 (define (write-float port value size)
-  (write-raw port (to-big-endian (float->blob value size)) size))
+  (write-bytevector (to-big-endian (float->bytevector value size)) port 0 size))
 
 (define (write-array port value size)
   (assert (= (vector-length value) size) "write-array: invalid size" size)
@@ -191,13 +179,15 @@
       b)))
 
 (define (read-raw port size #!optional (mapper identity))
-  (let ((data (make-u8vector size)))
-    (let loop ((index 0))
-      (if (< index size)
-          (let ((byte (read-byte/eof-error port)))
-            (u8vector-set! data index byte)
-            (loop (add1 index)))
-          (mapper (u8vector->blob data))))))
+  (let ((data (make-bytevector size)))
+    (let loop ((remaining size)
+               (n 0))
+      (if (zero? remaining)
+          (mapper data)
+          (let ((m (read-bytevector! data port n remaining)))
+            (if (zero? m)
+                (error "premature eof")
+                (loop (- remaining m) (+ n m))))))))
 
 (define (read-uint port size #!optional (mapper identity))
   (if (= size 1)  ; special case of one byte for efficiency
@@ -214,7 +204,7 @@
         (mapper (- (add1 value))))))
 
 (define (read-float port size #!optional (mapper identity))
-  (mapper (blob->float (from-big-endian (read-raw port size)))))
+  (mapper (bytevector->float (from-big-endian (read-raw port size)))))
 
 ; Decode header
 (define (fixed-uint? value)
@@ -396,23 +386,27 @@
            (lambda (port value header header-size size)
              (write-header port header)
              (write-int port size header-size)
-             (write-raw port value size)))
+             (write-bytevector value port 0 size)))
          (read-str
            (lambda (port size #!optional (mapper identity))
-             (mapper (read-raw port size blob->string))))
+             ;; We choose to use bytes->string over utf8->string so we accept
+             ;; malformed utf8 rather than signal an error.
+             ;;
+             ;; We pass the bounds explicitly to work around a bug in 6.0.0.
+             (mapper (read-raw port size (cut bytes->string <> 0 size)))))
          (pack
            (lambda (port value)
              (if (not (string? value))
                (error 'badInput "cannot pack value as str" value))
-             (let* ((blob (string->blob value))
-                    (size (blob-size blob)))
+             (let* ((bv (string->utf8 value))
+                    (size (bytevector-length bv)))
                (cond ((<= size fixed_raw_limit)
                       (let ((header (bitwise-ior #xa0 size)))
                         (write-byte header port)
-                        (write-raw port blob size)))
-                     ((<= size raw8_limit)  (lowrite port blob 'str8  1 size))
-                     ((<= size raw16_limit) (lowrite port blob 'str16 2 size))
-                     ((<= size raw32_limit) (lowrite port blob 'str32 4 size))
+                        (write-bytevector bv port 0 size)))
+                     ((<= size raw8_limit)  (lowrite port bv 'str8  1 size))
+                     ((<= size raw16_limit) (lowrite port bv 'str16 2 size))
+                     ((<= size raw32_limit) (lowrite port bv 'str32 4 size))
                      (#t                    (out-of-limit-error 'str value)))))))
     (match-lambda*
       (('unpack 'str8)  (lambda (port mapper) (read-str port (read-uint port 1) mapper)))
@@ -428,14 +422,14 @@
            (lambda (port value header header-size size)
              (write-header port header)
              (write-int port size header-size)
-             (write-raw port value size)))
+             (write-bytevector value port 0 size)))
          (read-bin
            read-raw)
          (pack
            (lambda (port value)
-             (if (not (blob? value))
+             (if (not (bytevector? value))
                (error 'badInput "cannot pack value as bin" value))
-             (let ((size (blob-size value)))
+             (let ((size (bytevector-length value)))
                (cond
                  ((<= size raw8_limit)  (lowrite port value 'bin8  1 size))
                  ((<= size raw16_limit) (lowrite port value 'bin16 2 size))
@@ -457,7 +451,7 @@
               (< type 0)
               (> type 127))
         (error (format "invalid type ~A, it should be a number between 0 and 127" type)))
-      (if (not (blob? data))
+      (if (not (bytevector? data))
         (error (format "invalid data ~A, it should be a blob" data)))
       (old-make-extension type data))))
 
@@ -468,7 +462,7 @@
              (if header-size
                (write-int port size header-size))
              (write-int port type 1)
-             (write-raw port data size)))
+             (write-bytevector data port 0 size)))
          (read-ext
            (lambda (port size mapper)
              (let* ((type (read-uint port 1))
@@ -480,7 +474,7 @@
                  (error 'badInput "cannot pack value as extension " value))
              (let* ((type (extension-type value))
                     (data (extension-data value))
-                    (size (blob-size data)))
+                    (size (bytevector-length data)))
                (cond
                  ((<= size 1)           (lowrite port 'fixext1  type data #f 1))
                  ((<= size 2)           (lowrite port 'fixext2  type data #f 2))
@@ -525,12 +519,12 @@
           ((flonum? value)
            (pack-double port value))
           ((rational? value)
-           (pack-double port (exact->inexact value)))
+           (pack-double port (inexact value)))
           ((complex? value)
            (error "complex numbers are not supported by the serialization"))
           ((number? value) ; should never trigger unless a new number type is introduced
            (error "I have not even considered this type" value))
-          ((blob? value)
+          ((bytevector? value)
            (pack-bin port value))
           ((string? value)
            (pack-str port value))
@@ -545,8 +539,10 @@
           (#t
            (error (format "I don't know how to handle: ~A" value))))))
 
-(define (pack/blob value)
-    (string->blob (call-with-output-string (cut pack <> value))))
+(define (pack/bytevector value)
+  (let ((port (open-output-bytevector)))
+    (call-with-port port (cut pack <> value))
+    (get-output-bytevector port)))
 
 (define (unpack port #!optional (mapper identity))
   (let ((value (read-byte port)))
@@ -574,6 +570,6 @@
             ((fixed-map? value)   ((Map   'unpack 'fixed) port value mapper))
             (#t                   (error 'unpack "cannot unpack" value))))))
 
-(define (unpack/blob blob #!optional (mapper identity))
-  (call-with-input-string (blob->string blob) (cut unpack <> mapper)))
-
+(define (unpack/bytevector bv #!optional (mapper identity))
+  (let ((port (open-input-bytevector bv)))
+    (call-with-port port (cut unpack <> mapper))))

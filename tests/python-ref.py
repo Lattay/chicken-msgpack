@@ -3,9 +3,9 @@ import msgpack
 ASSERT_TEMPLATE = '''
 (test-group "{name}"
     (test "unpack" {chicken_expr}
-                   (unpack/blob (u8vector->blob/shared #u8({blob}))))
-    (test "pack" (u8vector->blob/shared #u8({blob}))
-                 (pack/blob {chicken_expr})))
+                   (unpack/bytevector #u8({blob})))
+    (test "pack" #u8({blob})
+                 (pack/bytevector {chicken_expr})))
 '''
 
 
@@ -51,6 +51,6 @@ with open('tests/python-ref-tests.scm', 'w') as f:
     )
     append_assert(
         msgpack.ExtType(42, 'a'.encode('utf8')),
-        chicken_expr='(make-extension 42 (string->blob "a"))',
+        chicken_expr='(make-extension 42 (string->utf8 "a"))',
         name='extension'
     )

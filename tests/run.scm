@@ -24,7 +24,7 @@
 ;;  THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 (declare (not standard-bindings scheme#vector-length))
-(declare (not extended-bindings chicken.blob#blob-size))
+(declare (not extended-bindings chicken.bytevector#bytevector-length))
 (import chicken.port
         test)
 (include "utils.scm")
@@ -44,35 +44,45 @@
      (let ()
        body ...))))
 
+;; Why are those not a part of R7RS?
+(define (call-with-output-bytevector proc)
+  (let ((port (open-output-bytevector)))
+    (call-with-port port (cut proc <>))
+    (get-output-bytevector port)))
+
+(define (call-with-input-bytevector bytevector proc)
+  (let ((port (open-input-bytevector bytevector)))
+    (call-with-port port (cut proc <>))))
+
 (test-group "all tests"
   (test-group "read-byte/eof-error"
-    (test "ok" 97 (call-with-input-string "a" read-byte/eof-error))
-    (test-error "eof" (call-with-input-string "" read-byte/eof-error)))
+    (test "ok" 97 (call-with-input-bytevector #u8(97) read-byte/eof-error))
+    (test-error "eof" (call-with-input-bytevector #u8() read-byte/eof-error)))
 
   (test-group "pack/unpack"
     (define (packs value #!optional (packer pack))
-      (call-with-output-string (cut packer <> value)))
+      (call-with-output-bytevector (cut packer <> value)))
 
     (define (pack/unpack input #!optional (mapper identity))
       (let* ((packed-buffer (packs input)))
-        (call-with-input-string packed-buffer (cut unpack <> mapper))))
+        (call-with-input-bytevector packed-buffer (cut unpack <> mapper))))
 
     (define (pack/unpack-test name input #!optional (mapper identity) (packer pack))
-      (let* ((packed-buffer (call-with-output-string (cut packer <> input))))
-        (call-with-input-string packed-buffer
-                                (lambda (port)
-                                  (let ((result (unpack port mapper)))
-                                    (test name input result) ; unpacked value is the same that was packed
-                                    (test-assert "" (eof-object? (unpack port mapper))) ; no more left
-                                    result)))))
+      (let* ((packed-buffer (call-with-output-bytevector (cut packer <> input))))
+        (call-with-input-bytevector packed-buffer
+                                    (lambda (port)
+                                      (let ((result (unpack port mapper)))
+                                        (test name input result) ; unpacked value is the same that was packed
+                                        (test-assert "" (eof-object? (unpack port mapper))) ; no more left
+                                        result)))))
 
     (define (mapper-test name value mapper #!optional (packer pack))
-      (let* ((packed-buffer (call-with-output-string (cut packer <> value))))
-        (call-with-input-string packed-buffer
-                                (lambda (port)
-                                  (let ((v (unpack port mapper)))
-                                    (test name v (mapper value))
-                                    v)))))
+      (let* ((packed-buffer (call-with-output-bytevector (cut packer <> value))))
+        (call-with-input-bytevector packed-buffer
+                                    (lambda (port)
+                                      (let ((v (unpack port mapper)))
+                                        (test name v (mapper value))
+                                        v)))))
 
     (test-group "constants"
       (let ((mapper (lambda (x) (not x))))
@@ -122,39 +132,44 @@
 
     (test-group "str"
       (test-error "invalid: number" (packs -1 pack-str))
-      (pack/unpack-test "fixed str" (make-string 1))
-      (pack/unpack-test "str8" (make-string 40))
-      (pack/unpack-test "str16" (make-string 40))
+      ;; Make sure the strings are 7-bit ASCII, otherwise the length will be
+      ;; different when encoded in UTF-8.
+      (pack/unpack-test "fixed str" (make-string 1 #\a))
+      (pack/unpack-test "str8" (make-string 40 #\a))
+      (pack/unpack-test "str16" (make-string 40 #\a))
       (if (eq? fast/full 'full)
-          (pack/unpack-test "str32" (make-string (expt 2 17)))))
+          (pack/unpack-test "str32" (make-string (expt 2 17) #\a)))
+      (pack/unpack-test "utf8 roundtrip" "¡Hola! ¿Qué tal? 你好 Привет"))
 
     (test-group "bin"
       (test-error "invalid: number" (packs -1 pack-bin))
-      (let ((v (string->blob "hola")))
-        (mapper-test "bin mapper" v blob->string))
-      (pack/unpack-test "bin8" (make-random-blob 40))
-      (pack/unpack-test "bin16" (make-random-blob 40))
+      (let ((v (string->utf8 "hola")))
+        (mapper-test "bin mapper" v utf8->string))
+      (pack/unpack-test "bin8" (make-random-bytevector 40))
+      (pack/unpack-test "bin16" (make-random-bytevector 40))
       (if (eq? fast/full 'full)
-          (pack/unpack-test "bin32" (make-random-blob (expt 2 17)))))
+          (pack/unpack-test "bin32" (make-random-bytevector (expt 2 17)))))
 
     (test-group "ext"
-      (test-error "invalid ext type" (packs (make-extension 200 (make-random-blob 1)) pack-ext))
-      (pack/unpack-test "fixext1"  (make-extension 1 (make-random-blob 1)))
-      (pack/unpack-test "fixext2"  (make-extension 1 (make-random-blob 2)))
-      (pack/unpack-test "fixext4"  (make-extension 1 (make-random-blob 4)))
-      (pack/unpack-test "fixext8"  (make-extension 1 (make-random-blob 8)))
-      (pack/unpack-test "fixext16" (make-extension 1 (make-random-blob 16)))
-      (pack/unpack-test "ext8"     (make-extension 1 (make-random-blob 17)))
-      (pack/unpack-test "ext16"    (make-extension 1 (make-random-blob raw16_limit)))
+      (test-error "invalid ext type" (packs (make-extension 200 (make-random-bytevector 1)) pack-ext))
+      (pack/unpack-test "fixext1"  (make-extension 1 (make-random-bytevector 1)))
+      (pack/unpack-test "fixext2"  (make-extension 1 (make-random-bytevector 2)))
+      (pack/unpack-test "fixext4"  (make-extension 1 (make-random-bytevector 4)))
+      (pack/unpack-test "fixext8"  (make-extension 1 (make-random-bytevector 8)))
+      (pack/unpack-test "fixext16" (make-extension 1 (make-random-bytevector 16)))
+      (pack/unpack-test "ext8"     (make-extension 1 (make-random-bytevector 17)))
+      ;; This segfaults on 6.0.0, due to a bug in open-output-bytevector.
+      ;;(pack/unpack-test "ext16"    (make-extension 1 (make-random-bytevector raw16_limit)))
+      (pack/unpack-test "ext16"    (make-extension 1 (make-random-bytevector (add1 raw8_limit))))
       (if (eq? fast/full 'full)
-          (pack/unpack-test "ext32"  (make-extension 1 (make-random-blob (add1 raw16_limit))))))
+          (pack/unpack-test "ext32"  (make-extension 1 (make-random-bytevector (add1 raw16_limit))))))
 
     (test-group "array"
       (test-error "invalid: number" (packs -1 pack-array))
       (let ((list '(1 2 3 4)))
         (test "list" (list->vector list) (pack/unpack list)))
       (pack/unpack-test "fixed array" (make-vector 1 1))
-      (pack/unpack-test "fixed array: uint and raw" `#(1 2 ,(string->blob "hola")))
+      (pack/unpack-test "fixed array: uint and raw" `#(1 2 ,(string->utf8 "hola")))
       (pack/unpack-test "array16" (make-vector 40 1))
       (pack/unpack-test "nested array" '#(1 2 #(1 4)))
       (if (eq? fast/full 'full)
@@ -173,11 +188,11 @@
     ); end pack/unpack-test
 
   (test-group "limits"
-    (define (pack/as-blob value)
-      (string->blob (call-with-output-string (cut pack <> value))))
+    (define (pack/as-bytevector value)
+      (call-with-output-bytevector (cut pack <> value)))
 
     (define (packed-header value)
-      (blob-uref (pack/as-blob value) 0))
+      (bytevector-u8-ref (pack/as-bytevector value) 0))
 
     (define (test-header name value header)
       (test name (hash-table-ref constant-repr-map header) (packed-header value)))
@@ -199,7 +214,7 @@
       (syntax-rules ()
         ((test-container-out-of-limit size_proc_name limit value)
         (with-mocks ((size_proc_name (lambda (x) (+ limit 1))))
-                    (test-error "out of limit" (pack/as-blob value))))))
+                    (test-error "out of limit" (pack/as-bytevector value))))))
 
     (test-group "uint"
       (test-assert "fixed uint min" (fixed-uint? (packed-header 0)))
@@ -208,7 +223,7 @@
       (test-limit 'uint16 (+ uint8_limit 1) uint16_limit)
       (test-limit 'uint32 (+ uint16_limit 1) uint32_limit)
       (test-limit 'uint64 (+ uint32_limit 1) uint64_limit)
-      (test-error "out of limit" (pack/as-blob (+ uint64_limit 1))))
+      (test-error "out of limit" (pack/as-bytevector (+ uint64_limit 1))))
 
     (test-group "sint"
       (test-assert "fixed sint min" (fixed-sint? (packed-header -1)))
@@ -217,29 +232,29 @@
       (test-limit 'int16 (- int8_limit 1) int16_limit)
       (test-limit 'int32 (- int16_limit 1) int32_limit)
       (test-limit 'int64 (- int32_limit 1) int64_limit)
-      (test-error "out of limit" (pack/as-blob (- int64_limit 1))))
+      (test-error "out of limit" (pack/as-bytevector (- int64_limit 1))))
 
     (test-group "bin"
       (define (test-bin-limit type min max)
-        (test-container-limit blob-size type (make-blob 0) min max))
+        (test-container-limit bytevector-length type (make-bytevector 0) min max))
 
-      (with-mocks ((write-raw (lambda (port value size) #t)))
+      (with-mocks ((write-bytevector (lambda (value port start size) #t)))
                   (test-bin-limit 'bin8  (+ 1 fixed_raw_limit) raw8_limit)
                   (test-bin-limit 'bin16 (+ 1 raw8_limit)      raw16_limit)
                   (test-bin-limit 'bin32 (+ 1 raw16_limit)     raw32_limit)
-                  (test-container-out-of-limit blob-size raw32_limit (make-blob 0))))
+                  (test-container-out-of-limit bytevector-length raw32_limit (make-bytevector 0))))
 
     (test-group "str"
       (define (test-str-limit type min max)
-        (test-container-limit blob-size type "" min max))
+        (test-container-limit bytevector-length type "" min max))
 
-      (with-mocks ((write-raw (lambda (port value size) #t)))
+      (with-mocks ((write-bytevector (lambda (value port start size) #t)))
                   (test-assert "fixed str min" (fixed-str? (packed-header "")))
                   (test-assert "fixed str max" (fixed-str? (packed-header (make-string fixed_raw_limit))))
                   (test-str-limit 'str8  (+ 1 fixed_raw_limit) raw8_limit)
                   (test-str-limit 'str16 (+ 1 raw8_limit)      raw16_limit)
                   (test-str-limit 'str32 (+ 1 raw16_limit)     raw32_limit)
-                  (test-container-out-of-limit blob-size raw32_limit (make-blob 0))))
+                  (test-container-out-of-limit bytevector-length raw32_limit (make-bytevector 0))))
 
     (test-group "array"
       (define (test-array-limit type min max)
