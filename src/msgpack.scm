@@ -26,11 +26,11 @@
 ;;  THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 (module msgpack 
-        (pack pack/blob
+        (pack pack/bytevector
          pack-uint pack-sint
          pack-float pack-double
          pack-str pack-bin pack-array pack-map pack-ext
-         unpack unpack/blob
+         unpack unpack/bytevector
          extension? make-extension
          extension-type extension-data
          extension-type-set! extension-data-set!)

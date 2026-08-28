@@ -1,14 +1,17 @@
 
 == msgpack
 [[toc:]]
-An implementation of [[http://msgpack.org/|MessagePack]] for [[https://www.call-cc.org/|CHICKEN scheme v5]].
+An implementation of [[http://msgpack.org/|MessagePack]] for [[https://www.call-cc.org/|CHICKEN scheme v6]].
 
+=== CHICKEN 5 notes
 Forked from [[http://github.com/hugoArregui/msgpack-scheme|msgpack-scheme]] and partially rewritten
 (ported to CHICKEN 5 and cleaned up).
 I kept the original license and most of the original API. However the byte-blob have been replaced with
 Chicken 5 native blob.
 I removed the dependency on bind egg and the need for C++ code using built-ins features of C5.
 
+=== CHICKEN 6 notes
+Migrated to C6 bytevectors and UTF-8 strings.
 
 === Authors
 Hugo Arregui: Original author of the egg.
@@ -55,7 +58,7 @@ Also the simplest way to use is to use the generic procedures:
 
 <enscript highlight="scheme"> 
 (pack port value)
-(pack/blob value)
+(pack/bytevector value)
 </enscript>
 
 These procedures will call primitive type packers, with the following rules:
@@ -66,16 +69,16 @@ These procedures will call primitive type packers, with the following rules:
 - if the value is a list, it will be packed as an array.
 - if the value is a extension (see below), it will be packed as an ext
 
-The {{/blob}} version return a blob of packed data, the others directly write it to the port.
+The {{/bytevector}} version return a u8vector of packed data, the others directly write it to the port.
 
 Unpack procedures:
     [lang:scheme]
 
  (unpack port [mapper])
- (unpack/blob blob [mapper])
+ (unpack/bytevector bv [mapper])
 
 The optional mapper argument is applied to the output before returning.
-The {{/blob}} version unpack the content of blob instead of reading from a port.
+The {{/bytevector}} version unpack the content of u8vector instead of reading from a port.
 
 
 === Extension
@@ -86,12 +89,12 @@ Extension is a record defined as:
 }}
 
 * type: integer from 0 to 127
-* data: a blob
+* data: a bytevector
 
 Example:
 
 <enscript highlight="scheme"> 
-(make-extension 10 (string->byte-blob "hi"))
+(make-extension 10 (string->utf8 "hi"))
 </enscript>
 
 

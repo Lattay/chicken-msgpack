@@ -1,4 +1,4 @@
-(import srfi-4
-        chicken.blob)
+(import chicken.number-vector
+        chicken.bytevector)
 (import test)
 (import msgpack)
