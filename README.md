@@ -1,10 +1,10 @@
 msgpack
 =============================================
 
-An implementation of [MessagePack](http://msgpack.org/) for [CHICKEN scheme v5](https://www.call-cc.org/).
+An implementation of [MessagePack](http://msgpack.org/) for [CHICKEN scheme v6](https://www.call-cc.org/).
 
 Forked from [msgpack-scheme](http://github.com/hugoArregui/msgpack-scheme) and partially rewritten
-(ported to CHICKEN 5 and cleaned up).
+(ported to CHICKEN 5 and cleaned up, later ported to CHICKEN v6).
 I kept the original license and most of the original API. However the byte-blob have been replaced with
 Chicken 5 native blob.
 I removed the dependency on bind egg and the need for C++ code using built-ins features of C5.
@@ -13,6 +13,7 @@ Authors
 -------
 Hugo Arregui: Original author of the egg.
 Théo Cavignac: ported the egg to Chicken 5
+Stanislav Kljuhhin: ported the egg to Chicken 6
 
 Repository
 ----------
@@ -101,6 +102,10 @@ Distributed under the New BSD License.
 
 History
 -------
+v2.0.0 Port to Chicken 6 by Stanislav Kljuhhin (see https://github.com/Lattay/chicken-msgpack/pull/3)
+
+v1.0.4 Bug fix concerning exact number (see https://github.com/Lattay/chicken-msgpack/issues/1)
+
 v1.0.3 Ironing details for publication.
 
 v1.0.0 Port to Chicken 5.
